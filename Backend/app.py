@@ -31,9 +31,6 @@ db = SQLAlchemy(app)
 CORS(app, resources={r"/*": {"origins": "*"}}, support_credentials=True)
 
 # Load Swagger
-swagger = Swagger(app)
-
-
 try:
     with open("swagger.yaml", "r") as f:
         swagger_template = yaml.safe_load(f)
