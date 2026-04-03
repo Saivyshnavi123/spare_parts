@@ -1,0 +1,165 @@
+swagger: "2.0"
+info:
+  title: "Auto Spare Parts API"
+  description: "Comprehensive API for spare parts, orders, and payments."
+  version: "1.0"
+basePath: "/"
+schemes: [http, https]
+consumes: [application/json]
+produces: [application/json]
+
+paths:
+  /register:
+    post:
+      tags: [Auth]
+      parameters:
+        - in: body
+          name: user
+          schema:
+            type: object
+            properties:
+              first_name: {type: string}
+              email: {type: string}
+              password: {type: string}
+      responses:
+        201: {description: "Created"}
+
+  /login:
+    post:
+      tags: [Auth]
+      parameters:
+        - in: body
+          name: creds
+          schema:
+            type: object
+            properties:
+              email: {type: string}
+              password: {type: string}
+      responses:
+        200: {description: "Success"}
+
+  /products:
+    get:
+      tags: [Products]
+      responses:
+        200: {description: "List of products with images"}
+    post:
+      tags: [Products]
+      consumes: [multipart/form-data]
+      parameters:
+        - in: formData
+          name: name
+          type: string
+          required: true
+        - in: formData
+          name: amount
+          type: number
+          required: true
+        - in: formData
+          name: description
+          type: string
+        - in: formData
+          name: file
+          type: file
+          description: "Upload product image"
+      responses:
+        201: {description: "Product added successfully"}
+
+  /products/{product_id}:
+    get:
+      tags: [Products]
+      parameters:
+        - in: path
+          name: product_id
+          type: integer
+          required: true
+      responses:
+        200: {description: "Success"}
+
+  /customers:
+    get:
+      tags: [Customers]
+      responses:
+        200: {description: "Success"}
+
+  /customers/{customer_id}:
+    get:
+      tags: [Customers]
+      parameters:
+        - in: path
+          name: customer_id
+          type: integer
+          required: true
+      responses:
+        200: {description: "Success"}
+    post:
+      tags: [Customers]
+      parameters:
+        - in: path
+          name: customer_id
+          type: integer
+          required: true
+        - in: body
+          name: data
+          schema:
+            type: object
+            properties:
+              first_name: {type: string}
+              phone: {type: string}
+      responses:
+        200: {description: "Updated"}
+
+  /orders:
+    post:
+      tags: [Orders]
+      parameters:
+        - in: body
+          name: order
+          schema:
+            type: object
+            properties:
+              customer_id: {type: integer}
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    product_id: {type: integer}
+                    quantity: {type: integer}
+      responses:
+        201: {description: "Created"}
+
+  /orders/{order_id}:
+    put:
+      tags: [Orders]
+      parameters:
+        - in: path
+          name: order_id
+          type: integer
+          required: true
+        - in: body
+          name: status
+          schema:
+            type: object
+            properties:
+              status: {type: string}
+      responses:
+        200: {description: "Updated"}
+
+  /orders/{order_id}/payment:
+    post:
+      tags: [Orders]
+      parameters:
+        - in: path
+          name: order_id
+          type: integer
+          required: true
+        - in: body
+          name: pay
+          schema:
+            type: object
+            properties:
+              amount: {type: number}
+              payment_method: {type: string}
+      responses:
+        200: {description: "Success"}
