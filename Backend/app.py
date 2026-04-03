@@ -217,6 +217,7 @@ def process_payment(order_id):
 if __name__ == '__main__':
     with app.app_context():
         if INIT_DB:
+            db.drop_all()
             db.create_all()
             seed_data()
     app.run(debug=True, port=5000)
