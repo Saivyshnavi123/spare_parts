@@ -28,7 +28,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SWAGGER'] = {'title': 'Auto Spare Parts API', 'uiversion': 3}
 
 db = SQLAlchemy(app)
-CORS(app, resources={r"/*": {"origins": "*"}}, support_credentials=True)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Load Swagger
 try:
