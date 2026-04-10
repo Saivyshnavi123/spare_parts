@@ -50,6 +50,208 @@ def get_db_connection():
         sslmode='require'
     )
 
+
+def init_db():
+    """Creates tables and seeds initial data if they don't exist."""
+    print("Initializing database...")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        setup_queries = """
+                        CREATE TABLE IF NOT EXISTS customers \
+                        ( \
+                            customer_id \
+                            SERIAL \
+                            PRIMARY \
+                            KEY, \
+                            first_name \
+                            VARCHAR \
+                        ( \
+                            100 \
+                        ),
+                            last_name VARCHAR \
+                        ( \
+                            100 \
+                        ),
+                            email VARCHAR \
+                        ( \
+                            255 \
+                        ) UNIQUE NOT NULL,
+                            password VARCHAR \
+                        ( \
+                            255 \
+                        ) NOT NULL,
+                            phone VARCHAR \
+                        ( \
+                            20 \
+                        ),
+                            address_line1 TEXT,
+                            address_line2 TEXT,
+                            city VARCHAR \
+                        ( \
+                            100 \
+                        ),
+                            state VARCHAR \
+                        ( \
+                            100 \
+                        ),
+                            zip_code VARCHAR \
+                        ( \
+                            20 \
+                        ),
+                            country VARCHAR \
+                        ( \
+                            100 \
+                        ),
+                            role VARCHAR \
+                        ( \
+                            20 \
+                        ) DEFAULT 'user'
+                            );
+
+                        CREATE TABLE IF NOT EXISTS products \
+                        ( \
+                            product_id \
+                            SERIAL \
+                            PRIMARY \
+                            KEY, \
+                            name \
+                            VARCHAR \
+                        ( \
+                            255 \
+                        ) UNIQUE NOT NULL,
+                            description TEXT,
+                            amount DECIMAL \
+                        ( \
+                            10, \
+                            2 \
+                        ) NOT NULL,
+                            stock_quantity INTEGER DEFAULT 0,
+                            image_url VARCHAR \
+                        ( \
+                            255 \
+                        ) NOT NULL
+                            );
+
+                        CREATE TABLE IF NOT EXISTS orders \
+                        ( \
+                            order_id \
+                            SERIAL \
+                            PRIMARY \
+                            KEY, \
+                            customer_id \
+                            INTEGER \
+                            REFERENCES \
+                            customers \
+                        ( \
+                            customer_id \
+                        ),
+                            total_amount DECIMAL \
+                        ( \
+                            10, \
+                            2 \
+                        ),
+                            status VARCHAR \
+                        ( \
+                            50 \
+                        ) DEFAULT 'Pending',
+                            payment_method VARCHAR \
+                        ( \
+                            50 \
+                        ),
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            );
+
+                        CREATE TABLE IF NOT EXISTS order_items \
+                        ( \
+                            item_id \
+                            SERIAL \
+                            PRIMARY \
+                            KEY, \
+                            order_id \
+                            INTEGER \
+                            REFERENCES \
+                            orders \
+                        ( \
+                            order_id \
+                        ),
+                            product_id INTEGER REFERENCES products \
+                        ( \
+                            product_id \
+                        ),
+                            quantity INTEGER,
+                            price DECIMAL \
+                        ( \
+                            10, \
+                            2 \
+                        ),
+                            subtotal DECIMAL \
+                        ( \
+                            10, \
+                            2 \
+                        )
+                            );
+
+                        CREATE TABLE IF NOT EXISTS payments \
+                        ( \
+                            payment_id \
+                            SERIAL \
+                            PRIMARY \
+                            KEY, \
+                            order_id \
+                            INTEGER \
+                            REFERENCES \
+                            orders \
+                        ( \
+                            order_id \
+                        ),
+                            amount DECIMAL \
+                        ( \
+                            10, \
+                            2 \
+                        ),
+                            payment_method VARCHAR \
+                        ( \
+                            50 \
+                        ),
+                            payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            ); \
+                        """
+        cursor.execute(setup_queries)
+
+        # Seed Admin User
+        admin_email = 'admin@spare.com'
+        cursor.execute("SELECT * FROM customers WHERE email = %s", (admin_email,))
+        if not cursor.fetchone():
+            hashed_pw = bcrypt.hashpw("Admin@123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            cursor.execute("""
+                           INSERT INTO customers (first_name, last_name, email, password, role)
+                           VALUES ('Admin', 'User', %s, %s, 'admin')
+                           """, (admin_email, hashed_pw))
+
+        # Seed default products
+        products = [
+            ('Brake Pads', 'High-performance ceramic brake pads', 45.00, 100, '/static/uploads/default.png'),
+            ('Oil Filter', 'Premium synthetic oil filter', 12.50, 250, '/static/uploads/default.png')
+        ]
+        for p in products:
+            cursor.execute(
+                "INSERT INTO products (name, description, amount, stock_quantity, image_url) VALUES (%s, %s, %s, %s, %s) ON CONFLICT (name) DO NOTHING",
+                p)
+
+        conn.commit()
+        print("Database initialized successfully.")
+    except Exception as e:
+        print(f"Error initializing database: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# -----------------------------
+# RUN INITIALIZATION
+# -----------------------------
+init_db()
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
