@@ -1,283 +1,165 @@
 swagger: "2.0"
 info:
   title: "Auto Spare Parts API"
-  description: "API for managing auto spare parts, customers, and orders."
-  version: "1.0.0"
-
-host: "localhost:10000"
+  description: "Comprehensive API for spare parts, orders, and payments."
+  version: "1.0"
 basePath: "/"
-schemes:
-  - "http"
-  - "https"
-
-consumes:
-  - "application/json"
-produces:
-  - "application/json"
+schemes: [http, https]
+consumes: [application/json]
+produces: [application/json]
 
 paths:
   /register:
     post:
-      tags:
-        - Auth
-      summary: "Register a new customer"
+      tags: [Auth]
       parameters:
-        - in: "body"
-          name: "body"
-          required: true
+        - in: body
+          name: user
           schema:
-            $ref: "#/definitions/CustomerRegister"
+            type: object
+            properties:
+              first_name: {type: string}
+              email: {type: string}
+              password: {type: string}
       responses:
-        201:
-          description: "Customer registered successfully"
-        400:
-          description: "Email already exists"
+        201: {description: "Created"}
 
   /login:
     post:
-      tags:
-        - Auth
-      summary: "User login"
+      tags: [Auth]
       parameters:
-        - in: "body"
-          name: "body"
-          required: true
+        - in: body
+          name: creds
           schema:
-            $ref: "#/definitions/LoginRequest"
+            type: object
+            properties:
+              email: {type: string}
+              password: {type: string}
       responses:
-        200:
-          description: "Login successful"
-        401:
-          description: "Invalid Credentials"
+        200: {description: "Success"}
 
   /products:
     get:
-      tags:
-        - Products
-      summary: "Get all products"
+      tags: [Products]
       responses:
-        200:
-          description: "List of products"
+        200: {description: "List of products with images"}
     post:
-      tags:
-        - Products
-      summary: "Add a new product (Admin only)"
-      consumes:
-        - "multipart/form-data"
+      tags: [Products]
+      consumes: [multipart/form-data]
       parameters:
-        - name: "admin_id"
-          in: "formData"
-          type: "integer"
+        - in: formData
+          name: name
+          type: string
           required: true
-        - name: "name"
-          in: "formData"
-          type: "string"
+        - in: formData
+          name: amount
+          type: number
           required: true
-        - name: "amount"
-          in: "formData"
-          type: "number"
-          required: true
-        - name: "description"
-          in: "formData"
-          type: "string"
-        - name: "stock_quantity"
-          in: "formData"
-          type: "integer"
-        - name: "file"
-          in: "formData"
-          type: "file"
-          description: "Product image"
+        - in: formData
+          name: description
+          type: string
+        - in: formData
+          name: file
+          type: file
+          description: "Upload product image"
       responses:
-        201:
-          description: "Product added successfully"
-        403:
-          description: "Admin access required"
+        201: {description: "Product added successfully"}
 
   /products/{product_id}:
     get:
-      tags:
-        - Products
-      summary: "Get a specific product"
+      tags: [Products]
       parameters:
-        - name: "product_id"
-          in: "path"
-          type: "integer"
+        - in: path
+          name: product_id
+          type: integer
           required: true
       responses:
-        200:
-          description: "Product details"
-        404:
-          description: "Product not found"
+        200: {description: "Success"}
 
   /customers:
     get:
-      tags:
-        - Customers
-      summary: "Get all customers"
+      tags: [Customers]
       responses:
-        200:
-          description: "List of customers"
+        200: {description: "Success"}
 
   /customers/{customer_id}:
     get:
-      tags:
-        - Customers
-      summary: "Get customer profile"
+      tags: [Customers]
       parameters:
-        - name: "customer_id"
-          in: "path"
-          type: "integer"
+        - in: path
+          name: customer_id
+          type: integer
           required: true
       responses:
-        200:
-          description: "Customer data"
-        404:
-          description: "Not found"
+        200: {description: "Success"}
     post:
-      tags:
-        - Customers
-      summary: "Update customer profile"
+      tags: [Customers]
       parameters:
-        - name: "customer_id"
-          in: "path"
-          type: "integer"
+        - in: path
+          name: customer_id
+          type: integer
           required: true
-        - in: "body"
-          name: "body"
-          required: true
+        - in: body
+          name: data
           schema:
-            $ref: "#/definitions/CustomerUpdate"
+            type: object
+            properties:
+              first_name: {type: string}
+              phone: {type: string}
       responses:
-        200:
-          description: "Customer updated successfully"
-
-  /customers/{customer_id}/orders:
-    get:
-      tags:
-        - Orders
-      summary: "Get all orders for a specific customer"
-      parameters:
-        - name: "customer_id"
-          in: "path"
-          type: "integer"
-          required: true
-      responses:
-        200:
-          description: "List of customer orders"
+        200: {description: "Updated"}
 
   /orders:
     post:
-      tags:
-        - Orders
-      summary: "Create a new order"
+      tags: [Orders]
       parameters:
-        - in: "body"
-          name: "body"
-          required: true
+        - in: body
+          name: order
           schema:
-            $ref: "#/definitions/OrderRequest"
+            type: object
+            properties:
+              customer_id: {type: integer}
+              items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    product_id: {type: integer}
+                    quantity: {type: integer}
       responses:
-        201:
-          description: "Order created"
+        201: {description: "Created"}
 
   /orders/{order_id}:
     put:
-      tags:
-        - Orders
-      summary: "Update order status"
+      tags: [Orders]
       parameters:
-        - name: "order_id"
-          in: "path"
-          type: "integer"
+        - in: path
+          name: order_id
+          type: integer
           required: true
-        - in: "body"
-          name: "body"
-          required: true
+        - in: body
+          name: status
           schema:
             type: object
             properties:
-              status:
-                type: string
+              status: {type: string}
       responses:
-        200:
-          description: "Status updated"
+        200: {description: "Updated"}
 
   /orders/{order_id}/payment:
     post:
-      tags:
-        - Orders
-      summary: "Process payment for an order"
+      tags: [Orders]
       parameters:
-        - name: "order_id"
-          in: "path"
-          type: "integer"
+        - in: path
+          name: order_id
+          type: integer
           required: true
-        - in: "body"
-          name: "body"
-          required: true
+        - in: body
+          name: pay
           schema:
             type: object
             properties:
-              amount:
-                type: number
-              payment_method:
-                type: string
+              amount: {type: number}
+              payment_method: {type: string}
       responses:
-        200:
-          description: "Payment processed"
-
-definitions:
-  CustomerRegister:
-    type: "object"
-    required:
-      - first_name
-      - last_name
-      - email
-      - password
-    properties:
-      first_name: { type: "string" }
-      last_name: { type: "string" }
-      email: { type: "string" }
-      password: { type: "string" }
-      phone: { type: "string" }
-
-  LoginRequest:
-    type: "object"
-    required:
-      - email
-      - password
-    properties:
-      email: { type: "string" }
-      password: { type: "string" }
-
-  CustomerUpdate:
-    type: "object"
-    properties:
-      first_name: { type: "string" }
-      last_name: { type: "string" }
-      email: { type: "string" }
-      password: { type: "string" }
-      phone: { type: "string" }
-      address_line1: { type: "string" }
-      address_line2: { type: "string" }
-      city: { type: "string" }
-      state: { type: "string" }
-      zip_code: { type: "string" }
-      country: { type: "string" }
-
-  OrderRequest:
-    type: "object"
-    required:
-      - customer_id
-      - payment_method
-      - items
-    properties:
-      customer_id: { type: "integer" }
-      payment_method: { type: "string" }
-      items:
-        type: "array"
-        items:
-          type: "object"
-          properties:
-            product_id: { type: "integer" }
-            quantity: { type: "integer" }
+        200: {description: "Success"}

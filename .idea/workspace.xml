@@ -4,13 +4,22 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6ac118ab-05e0-4dba-a98a-a980c5770f98" name="Changes" comment="Updated the code!">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="6ac118ab-05e0-4dba-a98a-a980c5770f98" name="Changes" comment="Updated the code!&#10;&#10;# Conflicts:&#10;#&#9;.idea/workspace.xml&#10;#&#9;Backend/app.py" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_/Users/avinashg/PycharmProjects/spare_parts" value="3BrGE1LllSWGfesFmWYvNq7V9e9" />
+    </persistenceIdMap>
+  </component>
+  <component name="CopilotUserSelectedModel">
+    <selectedModels>
+      <entry key="chat-panel" value="Claude Haiku 4.5" />
+      <entry key="agent-panel" value="Claude Haiku 4.5" />
+    </selectedModels>
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -255,7 +264,31 @@
       <option name="project" value="LOCAL" />
       <updated>1775849227418</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="Updated the code!">
+      <option name="closed" value="true" />
+      <created>1775849986699</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1775849986699</updated>
+    </task>
+    <task id="LOCAL-00014" summary="Updated the code!">
+      <option name="closed" value="true" />
+      <created>1775849990242</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1775849990242</updated>
+    </task>
+    <task id="LOCAL-00015" summary="Updated the code!&#10;&#10;# Conflicts:&#10;#&#9;.idea/workspace.xml&#10;#&#9;Backend/app.py">
+      <option name="closed" value="true" />
+      <created>1775854511333</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1775854511333</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -277,11 +310,12 @@
     <MESSAGE value="Updated!" />
     <MESSAGE value="Added swagger support" />
     <MESSAGE value="Updated the code!" />
-    <option name="LAST_COMMIT_MESSAGE" value="Updated the code!" />
+    <MESSAGE value="Updated the code!&#10;&#10;# Conflicts:&#10;#&#9;.idea/workspace.xml&#10;#&#9;Backend/app.py" />
+    <option name="LAST_COMMIT_MESSAGE" value="Updated the code!&#10;&#10;# Conflicts:&#10;#&#9;.idea/workspace.xml&#10;#&#9;Backend/app.py" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/spare_parts$spare_parts.coverage" NAME="spare_parts Coverage Results" MODIFIED="1775847904005" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/spare_parts$Flask__Backend_app_py_.coverage" NAME="Flask (Backend/app.py) Coverage Results" MODIFIED="1775849210732" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/spare_parts$spare_parts.coverage" NAME="spare_parts Coverage Results" MODIFIED="1775852300305" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/spare_parts$Flask__Backend_app_py_.coverage" NAME="Flask (Backend/app.py) Coverage Results" MODIFIED="1775854281475" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>
