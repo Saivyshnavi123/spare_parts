@@ -171,6 +171,21 @@ def add_product():
         conn.rollback()
         return jsonify({'message': str(error)}), 500
 
+
+# API to get a list of all Products
+@app.route('/products', methods=['GET'])
+def get_products():
+    try:
+        # Fetch all columns including the newly added image_url
+        cursor.execute("SELECT * FROM products")
+        products = cursor.fetchall()
+
+        # Return as JSON
+        return jsonify({'results': products}), 200
+    except Exception as error:
+        print(f"Error fetching products: {error}")
+        return jsonify({'message': 'Internal Server Error'}), 500
+
 # API to authenticate user
 @app.route('/login', methods=['POST'])
 def login():
