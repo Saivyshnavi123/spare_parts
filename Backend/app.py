@@ -1,272 +1,309 @@
 import os
-import yaml
-from flask import Flask, request, jsonify, send_from_directory
-from flask_sqlalchemy import SQLAlchemy
-from flask_cors import CORS
+import psycopg2
 from flasgger import Swagger
-from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.utils import secure_filename
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from psycopg2.extras import RealDictCursor
 
-# ------------------- Configuration -------------------
 app = Flask(__name__)
+# CORS styling as per reference
+CORS(app, support_credentials=True)
 
-# Toggle: Set to True once to fix the 'image_url' error by resetting tables.
-# Set to False after your first successful deployment.
-INIT_DB = True
+# Initialize Swagger
+swagger = Swagger(app)
 
-UPLOAD_FOLDER = 'static/uploads'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+# --- CONFIGURATION TOGGLE ---
+# Set this to True for the first deployment. Set to False afterwards.
+INITIALIZE_DB = True
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# Database Connection (Render PostgreSQL)
-app.config[
-    'SQLALCHEMY_DATABASE_URI'] = 'postgresql://spare_parts_vpja_user:PDbO9jg9BhA6wTJVguim0PwwSoHgl7C6@dpg-d77vcc7pm1nc73fk49ig-a.oregon-postgres.render.com/spare_parts_vpja'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SWAGGER'] = {'title': 'Auto Spare Parts API', 'uiversion': 3}
-
-db = SQLAlchemy(app)
-CORS(app, resources={r"/*": {"origins": "*"}})
-
-# Load Swagger
+# Connect to your PostgreSQL database
 try:
-    with open("swagger.yaml", "r") as f:
-        swagger_template = yaml.safe_load(f)
-    swagger = Swagger(app, template=swagger_template)
-except FileNotFoundError:
-    swagger = Swagger(app)
+    conn = psycopg2.connect(
+        dbname="spare_parts_vpja",
+        user="spare_parts_vpja_user",
+        password="PDbO9jg9BhA6wTJVguim0PwwSoHgl7C6",
+        host="dpg-d77vcc7pm1nc73fk49ig-a.oregon-postgres.render.com",
+        port="5432",
+        sslmode='require'
+    )
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    print("Database connection established.")
+
+    # --- INITIALIZATION SCRIPT ---
+    if INITIALIZE_DB:
+        setup_queries = """
+    -- CASCADE is essential to remove tables with Foreign Key dependencies
+    DROP TABLE IF EXISTS order_items CASCADE;
+    DROP TABLE IF EXISTS payments CASCADE;
+    DROP TABLE IF EXISTS orders CASCADE;
+    DROP TABLE IF EXISTS products CASCADE;
+    DROP TABLE IF EXISTS customers CASCADE;
+        -- 1. Customers Table
+        CREATE TABLE IF NOT EXISTS customers (
+            customer_id SERIAL PRIMARY KEY,
+            first_name VARCHAR(100),
+            last_name VARCHAR(100),
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            phone VARCHAR(20),
+            address_line1 TEXT,
+            address_line2 TEXT,
+            city VARCHAR(100),
+            state VARCHAR(100),
+            zip_code VARCHAR(20),
+            country VARCHAR(100),
+            role VARCHAR(20) DEFAULT 'user'
+        );
+
+        -- 2. Products Table
+        CREATE TABLE IF NOT EXISTS products (
+            product_id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            description TEXT,
+            amount DECIMAL(10, 2) NOT NULL,
+            stock_quantity INTEGER DEFAULT 0
+        );
+
+        -- 3. Orders Table
+        CREATE TABLE IF NOT EXISTS orders (
+            order_id SERIAL PRIMARY KEY,
+            customer_id INTEGER REFERENCES customers(customer_id),
+            total_amount DECIMAL(10, 2),
+            status VARCHAR(50) DEFAULT 'Pending',
+            payment_method VARCHAR(50),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- 4. Order Items Table
+        CREATE TABLE IF NOT EXISTS order_items (
+            item_id SERIAL PRIMARY KEY,
+            order_id INTEGER REFERENCES orders(order_id),
+            product_id INTEGER REFERENCES products(product_id),
+            quantity INTEGER,
+            price DECIMAL(10, 2),
+            subtotal DECIMAL(10, 2)
+        );
+
+        -- 5. Payments Table (Required for /payment route)
+        CREATE TABLE IF NOT EXISTS payments (
+            payment_id SERIAL PRIMARY KEY,
+            order_id INTEGER REFERENCES orders(order_id),
+            amount DECIMAL(10, 2),
+            payment_method VARCHAR(50),
+            payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- Seed Initial Data
+        INSERT INTO products (name, description, amount, stock_quantity)
+        VALUES 
+        ('Brake Pads', 'High-performance ceramic brake pads', 45.00, 100),
+        ('Oil Filter', 'Premium synthetic oil filter', 12.50, 250),
+        ('Spark Plug', 'Iridium spark plug', 8.00, 500)
+        ON CONFLICT DO NOTHING;
+
+        INSERT INTO customers (first_name, last_name, email, password, role)
+        VALUES ('Admin', 'User', 'admin@spare.com', 'Admin@123', 'admin')
+        ON CONFLICT (email) DO NOTHING;
+        """
+        cursor.execute(setup_queries)
+        conn.commit()
+        print("Database initialized: Tables verified/created and sample data seeded.")
+
+except Exception as e:
+    print(f"Error connecting to or initializing database: {e}")
 
 
-# ------------------- Models -------------------
-
-class Customer(db.Model):
-    __tablename__ = 'customers'
-    customer_id = db.Column(db.Integer, primary_key=True)
-    first_name = db.Column(db.String(100))
-    last_name = db.Column(db.String(100))
-    email = db.Column(db.String(200), unique=True, nullable=False)
-    password = db.Column(db.String(256), nullable=False)
-    phone = db.Column(db.String(20))
-    address_line1 = db.Column(db.String(255))
-    city = db.Column(db.String(100))
-    role = db.Column(db.String(50), default='customer')
-
-    def to_dict(self):
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns if c.name != 'password'}
-
-
-class Product(db.Model):
-    __tablename__ = 'products'
-    product_id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text)
-    amount = db.Column(db.Float, nullable=False)
-    stock_quantity = db.Column(db.Integer, default=0)  # Added for stock management
-    image_url = db.Column(db.String(300))
-
-
-class Order(db.Model):
-    __tablename__ = 'orders'
-    order_id = db.Column(db.Integer, primary_key=True)
-    customer_id = db.Column(db.Integer, db.ForeignKey('customers.customer_id'))
-    total_amount = db.Column(db.Float)
-    payment_method = db.Column(db.String(50))
-    status = db.Column(db.String(50), default='Pending')
-    items = db.relationship('OrderItem', backref='order', lazy=True, cascade="all, delete-orphan")
-
-
-class OrderItem(db.Model):
-    __tablename__ = 'order_items'
-    id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('orders.order_id'))
-    product_id = db.Column(db.Integer, db.ForeignKey('products.product_id'))
-    quantity = db.Column(db.Integer, nullable=False)
-    price = db.Column(db.Float, nullable=False)
-    subtotal = db.Column(db.Float, nullable=False)
-
-
-class Payment(db.Model):
-    __tablename__ = 'payments'
-    payment_id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('orders.order_id'))
-    amount = db.Column(db.Float, nullable=False)
-    payment_method = db.Column(db.String(50))
-
-
-# ------------------- Helpers -------------------
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-def seed_data():
-    if not Customer.query.filter_by(email="admin@auto.com").first():
-        admin = Customer(first_name="Admin", email="admin@auto.com",
-                         password=generate_password_hash("admin123"), role="admin")
-        p1 = Product(name="Brake Pads", amount=45.50, description="Ceramic brake pads",
-                     stock_quantity=100, image_url="/static/uploads/placeholder.jpg")
-        db.session.add_all([admin, p1])
-        db.session.commit()
-
-
-# ------------------- API Endpoints -------------------
-
-# 1. Register
-@app.route('/register', methods=['POST'])
-def register():
-    data = request.json
-    if Customer.query.filter_by(email=data.get('email')).first():
-        return jsonify({'message': 'Error: Customer already exists'}), 400
-    new_user = Customer(first_name=data.get('first_name'), last_name=data.get('last_name'),
-                        email=data.get('email'), password=generate_password_hash(data['password']),
-                        phone=data.get('phone'))
-    db.session.add(new_user)
-    db.session.commit()
-    return jsonify({'message': 'Customer added successfully'}), 201
-
-
-# 2. Login
+# API to authenticate user
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
-    user = Customer.query.filter_by(email=data.get('email')).first()
-    if user and check_password_hash(user.password, data['password']):
-        return jsonify({'isValid': True, 'role': user.role, 'customer_id': user.customer_id}), 200
-    return jsonify({'message': 'Invalid Credentials'}), 401
+    email = data.get('email')
+    password = data.get('password')
+
+    cursor.execute("SELECT * FROM customers WHERE email = %s", (email,))
+    user = cursor.fetchone()
+    if user:
+        if user['password'] == password:
+            return jsonify({
+                'message': 'Login successful',
+                'isValid': True,
+                'role': user['role'],
+                'customer_id': user['customer_id']
+            }), 200
+        else:
+            return jsonify({'message': 'Invalid Credentials'}), 401
+    else:
+        return jsonify({'message': 'User not found'}), 404
 
 
-# 3. Get All Products
+# API to Register user
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.json
+    insert_query = """
+           INSERT INTO Customers (first_name, last_name, email, password, phone)
+           VALUES (%s, %s, %s, %s, %s)
+       """
+    try:
+        cursor.execute(insert_query, (
+            data.get('first_name'),
+            data.get('last_name'),
+            data.get('email'),
+            data.get('password'),
+            data.get('phone')
+        ))
+        conn.commit()
+        return jsonify({'message': 'Customer added successfully'}), 201
+    except psycopg2.IntegrityError:
+        conn.rollback()
+        return jsonify({'message': 'Error: Could not add Customer. Email already exists'}), 400
+
+
+# API to get a list of Products
 @app.route('/products', methods=['GET'])
 def get_products():
-    products = Product.query.all()
-    results = [{"product_id": p.product_id, "name": p.name, "amount": p.amount,
-                "desc": p.description, "stock": p.stock_quantity, "image_url": p.image_url} for p in products]
-    return jsonify({'results': results})
+    cursor.execute("SELECT * FROM products")
+    products = cursor.fetchall()
+    return jsonify({'results': products})
 
 
-# 4. Add Product (Multipart for Image Upload)
-@app.route('/products', methods=['POST'])
-def add_product():
-    # Admin Validation
-    admin_id = request.form.get('admin_id')
-    admin = Customer.query.get(admin_id)
-    if not admin or admin.role != 'admin':
-        return jsonify({"message": "Admin access required"}), 403
-
-    image_path = None
-    if 'file' in request.files:
-        file = request.files['file']
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            image_path = f"/static/uploads/{filename}"
-
-    new_p = Product(
-        name=request.form.get('name'),
-        amount=float(request.form.get('amount', 0)),
-        description=request.form.get('description'),
-        stock_quantity=int(request.form.get('stock_quantity', 0)),
-        image_url=image_path
-    )
-    db.session.add(new_p)
-    db.session.commit()
-    return jsonify({'message': 'Product added successfully', 'image_url': image_path}), 201
-
-
-# 5. Get Product by ID
+# API to get Product Details by ID
 @app.route('/products/<int:product_id>', methods=['GET'])
 def get_product(product_id):
-    p = Product.query.get(product_id)
-    if p:
-        return jsonify({"product_id": p.product_id, "name": p.name, "amount": p.amount,
-                        "desc": p.description, "stock": p.stock_quantity, "image_url": p.image_url}), 200
-    return jsonify({'message': 'Not found'}), 404
+    try:
+        cursor.execute("SELECT * FROM products WHERE product_id = %s", (product_id,))
+        product = cursor.fetchone()
+        if product:
+            return jsonify(product), 200
+        else:
+            return jsonify({'message': 'Product not found'}), 404
+    except psycopg2.Error as e:
+        print("Error fetching data from database:", e)
+        return jsonify({'message': 'Internal Server Error'}), 500
 
 
-# 6. List All Customers (Admin Only)
-@app.route('/customers', methods=['GET'])
-def get_customers():
-    return jsonify({'results': [c.to_dict() for c in Customer.query.all()]})
-
-
-# 7. Get Customer by ID
-@app.route('/customers/<int:customer_id>', methods=['GET'])
-def get_customer(customer_id):
-    c = Customer.query.get(customer_id)
-    return jsonify(c.to_dict()) if c else (jsonify({'message': 'Not found'}), 404)
-
-
-# 8. Update Customer Profile
+# API to Update Customer Details
 @app.route('/customers/<int:customer_id>', methods=['POST'])
 def update_customer(customer_id):
-    c = Customer.query.get(customer_id)
-    if not c: return jsonify({'message': 'Not found'}), 404
     data = request.json
-    for key in ['first_name', 'last_name', 'phone', 'city']:
-        if key in data: setattr(c, key, data[key])
-    db.session.commit()
-    return jsonify({'message': 'Updated successfully'}), 200
+    cursor.execute("SELECT * FROM customers WHERE customer_id = %s", (customer_id,))
+    customer = cursor.fetchone()
+
+    if not customer:
+        return jsonify({'message': 'Customer not found'}), 404
+
+    customer_dict = dict(customer)
+
+    update_query = """
+        UPDATE customers
+        SET first_name = %s, last_name = %s, email = %s, password = %s, phone = %s,
+        address_line1 = %s, address_line2 = %s, city = %s, state = %s, zip_code = %s,
+        country = %s, role = %s
+        WHERE customer_id = %s
+    """
+
+    try:
+        cursor.execute(update_query, (
+            data.get('first_name'), data.get('last_name'), data.get('email'),
+            data.get('password'), data.get('phone'), data.get('address_line1'),
+            data.get('address_line2'), data.get('city'), data.get('state'),
+            data.get('zip_code'), data.get('country'), customer_dict.get('role'), customer_id
+        ))
+        conn.commit()
+        return jsonify({'message': 'Customer updated successfully'}), 200
+    except psycopg2.Error as e:
+        conn.rollback()
+        print("Error updating data in database:", e)
+        return jsonify({'message': 'Internal Server Error'}), 500
 
 
-# 9. Create Order (With Automatic Stock Management)
+# API to create an order
 @app.route('/orders', methods=['POST'])
 def create_order():
     data = request.json
-    new_o = Order(customer_id=data['customer_id'], payment_method=data.get('payment_method'), total_amount=0)
-    db.session.add(new_o)
-    db.session.flush()
+    customer_id = data['customer_id']
+    payment_method = data['payment_method']
+    items = data['items']
 
-    total = 0
-    for item in data['items']:
-        p = Product.query.get(item['product_id'])
-        if p:
-            if p.stock_quantity < item['quantity']:
-                db.session.rollback()
-                return jsonify({'message': f'Insufficient stock for {p.name}'}), 400
+    total_amount = 0
+    order_items = []
 
-            # Decrement Stock
-            p.stock_quantity -= item['quantity']
+    for item in items:
+        cursor.execute("SELECT amount FROM products WHERE product_id = %s", (item['product_id'],))
+        product = cursor.fetchone()
+        if product:
+            subtotal = product['amount'] * item['quantity']
+            total_amount += subtotal
+            order_items.append((item['product_id'], item['quantity'], product['amount'], subtotal))
 
-            sub = p.amount * item['quantity']
-            total += sub
-            db.session.add(OrderItem(order_id=new_o.order_id, product_id=p.product_id,
-                                     quantity=item['quantity'], price=p.amount, subtotal=sub))
+    cursor.execute(
+        "INSERT INTO orders (customer_id, total_amount, payment_method) VALUES (%s, %s, %s) RETURNING order_id",
+        (customer_id, total_amount, payment_method))
+    order_id = cursor.fetchone()['order_id']
 
-    new_o.total_amount = total
-    db.session.commit()
-    return jsonify({'message': 'Order created and stock updated', 'order_id': new_o.order_id}), 201
+    for item in order_items:
+        cursor.execute(
+            "INSERT INTO order_items (order_id, product_id, quantity, price, subtotal) VALUES (%s, %s, %s, %s, %s)",
+            (order_id, item[0], item[1], item[2], item[3]))
+
+    conn.commit()
+    return jsonify({'message': 'Order created successfully', 'order_id': order_id}), 201
 
 
-# 10. Update Order Status
+# API to update order status
 @app.route('/orders/<int:order_id>', methods=['PUT'])
 def update_order_status(order_id):
-    o = Order.query.get(order_id)
-    if not o: return jsonify({'message': 'Not found'}), 404
-    o.status = request.json.get('status', o.status)
-    db.session.commit()
-    return jsonify({'message': 'Status updated'}), 200
+    data = request.json
+    status = data['status']
+    cursor.execute("UPDATE orders SET status = %s WHERE order_id = %s", (status, order_id))
+    conn.commit()
+    return jsonify({'message': 'Order status updated successfully'}), 200
 
 
-# 11. Process Payment
+# API to process payment
 @app.route('/orders/<int:order_id>/payment', methods=['POST'])
 def process_payment(order_id):
-    o = Order.query.get(order_id)
-    if not o: return jsonify({'message': 'Not found'}), 404
-    db.session.add(Payment(order_id=order_id, amount=request.json['amount'],
-                           payment_method=request.json['payment_method']))
-    o.status = 'Completed'
-    db.session.commit()
-    return jsonify({'message': 'Payment successful'}), 200
+    data = request.json
+    amount = data['amount']
+    payment_method = data['payment_method']
+    cursor.execute("INSERT INTO payments (order_id, amount, payment_method) VALUES (%s, %s, %s)",
+                   (order_id, amount, payment_method))
+
+    cursor.execute("UPDATE orders SET status = 'Completed' WHERE order_id = %s", (order_id,))
+    conn.commit()
+    return jsonify({'message': 'Payment processed successfully'}), 200
 
 
-# ------------------- Main Entry -------------------
+# API to get customer orders
+@app.route('/customers/<int:customer_id>/orders', methods=['GET'])
+def get_customer_orders(customer_id):
+    cursor.execute("SELECT * FROM orders WHERE customer_id = %s", (customer_id,))
+    orders = cursor.fetchall()
+    for order in orders:
+        cursor.execute("SELECT * FROM order_items WHERE order_id = %s", (order['order_id'],))
+        order['items'] = cursor.fetchall()
+    return jsonify({'results': orders})
+
+
+# Get Customer by ID
+@app.route('/customers/<int:customer_id>', methods=['GET'])
+def get_customer(customer_id):
+    cursor.execute("SELECT * FROM customers WHERE customer_id = %s", (customer_id,))
+    customer = cursor.fetchone()
+    if customer:
+        return jsonify(customer)
+    else:
+        return jsonify({'message': 'Customer not found'}), 404
+
+
+# Get List of customers
+@app.route('/customers', methods=['GET'])
+def get_customers():
+    cursor.execute("SELECT * FROM customers")
+    customers = cursor.fetchall()
+    return jsonify({'results': customers})
+
+
 if __name__ == '__main__':
-    with app.app_context():
-        if INIT_DB:
-            db.drop_all()  # Wipes existing schema to fix 'image_url' column error
-            db.create_all()
-            seed_data()
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port, debug=True)
