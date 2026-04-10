@@ -1,221 +1,283 @@
-openapi: 3.0.0
+swagger: "2.0"
 info:
-  title: Spare Parts Management API
-  description: API for managing customers, products, orders, and payments for a spare parts store.
-  version: 1.0.0
+  title: "Auto Spare Parts API"
+  description: "API for managing auto spare parts, customers, and orders."
+  version: "1.0.0"
 
-servers:
-  - url: https://dpg-d77vcc7pm1nc73fk49ig-a.oregon-postgres.render.com
-    description: Production Server
+host: "localhost:10000"
+basePath: "/"
+schemes:
+  - "http"
+  - "https"
+
+consumes:
+  - "application/json"
+produces:
+  - "application/json"
 
 paths:
-  /login:
-    post:
-      tags: [Authentication]
-      summary: Authenticate user
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                email: {type: string, example: "admin@spare.com"}
-                password: {type: string, example: "Admin@123"}
-      responses:
-        200:
-          description: Login successful
-        401:
-          description: Invalid Credentials
-        404:
-          description: User not found
-
   /register:
     post:
-      tags: [Authentication]
-      summary: Register a new customer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CustomerInput'
+      tags:
+        - Auth
+      summary: "Register a new customer"
+      parameters:
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: "#/definitions/CustomerRegister"
       responses:
         201:
-          description: Customer added successfully
+          description: "Customer registered successfully"
         400:
-          description: Email already exists
+          description: "Email already exists"
+
+  /login:
+    post:
+      tags:
+        - Auth
+      summary: "User login"
+      parameters:
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: "#/definitions/LoginRequest"
+      responses:
+        200:
+          description: "Login successful"
+        401:
+          description: "Invalid Credentials"
 
   /products:
     get:
-      tags: [Products]
-      summary: Get all products
+      tags:
+        - Products
+      summary: "Get all products"
       responses:
         200:
-          description: List of products
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  results:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Product'
+          description: "List of products"
+    post:
+      tags:
+        - Products
+      summary: "Add a new product (Admin only)"
+      consumes:
+        - "multipart/form-data"
+      parameters:
+        - name: "admin_id"
+          in: "formData"
+          type: "integer"
+          required: true
+        - name: "name"
+          in: "formData"
+          type: "string"
+          required: true
+        - name: "amount"
+          in: "formData"
+          type: "number"
+          required: true
+        - name: "description"
+          in: "formData"
+          type: "string"
+        - name: "stock_quantity"
+          in: "formData"
+          type: "integer"
+        - name: "file"
+          in: "formData"
+          type: "file"
+          description: "Product image"
+      responses:
+        201:
+          description: "Product added successfully"
+        403:
+          description: "Admin access required"
 
   /products/{product_id}:
     get:
-      tags: [Products]
-      summary: Get product details by ID
+      tags:
+        - Products
+      summary: "Get a specific product"
       parameters:
-        - name: product_id
-          in: path
+        - name: "product_id"
+          in: "path"
+          type: "integer"
           required: true
-          schema: {type: integer}
       responses:
         200:
-          description: Product details
+          description: "Product details"
         404:
-          description: Product not found
+          description: "Product not found"
 
   /customers:
     get:
-      tags: [Customers]
-      summary: Get all customers
+      tags:
+        - Customers
+      summary: "Get all customers"
       responses:
         200:
-          description: List of customers
+          description: "List of customers"
 
   /customers/{customer_id}:
     get:
-      tags: [Customers]
-      summary: Get customer by ID
+      tags:
+        - Customers
+      summary: "Get customer profile"
       parameters:
-        - name: customer_id
-          in: path
+        - name: "customer_id"
+          in: "path"
+          type: "integer"
           required: true
-          schema: {type: integer}
       responses:
         200:
-          description: Customer details
+          description: "Customer data"
+        404:
+          description: "Not found"
     post:
-      tags: [Customers]
-      summary: Update customer details
+      tags:
+        - Customers
+      summary: "Update customer profile"
       parameters:
-        - name: customer_id
-          in: path
+        - name: "customer_id"
+          in: "path"
+          type: "integer"
           required: true
-          schema: {type: integer}
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CustomerInput'
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: "#/definitions/CustomerUpdate"
       responses:
         200:
-          description: Customer updated successfully
+          description: "Customer updated successfully"
 
   /customers/{customer_id}/orders:
     get:
-      tags: [Customers]
-      summary: Get orders for a specific customer
+      tags:
+        - Orders
+      summary: "Get all orders for a specific customer"
       parameters:
-        - name: customer_id
-          in: path
+        - name: "customer_id"
+          in: "path"
+          type: "integer"
           required: true
-          schema: {type: integer}
       responses:
         200:
-          description: List of customer orders
+          description: "List of customer orders"
 
   /orders:
     post:
-      tags: [Orders]
-      summary: Create a new order
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                customer_id: {type: integer}
-                payment_method: {type: string}
-                items:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      product_id: {type: integer}
-                      quantity: {type: integer}
+      tags:
+        - Orders
+      summary: "Create a new order"
+      parameters:
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: "#/definitions/OrderRequest"
       responses:
         201:
-          description: Order created successfully
+          description: "Order created"
 
   /orders/{order_id}:
     put:
-      tags: [Orders]
-      summary: Update order status
+      tags:
+        - Orders
+      summary: "Update order status"
       parameters:
-        - name: order_id
-          in: path
+        - name: "order_id"
+          in: "path"
+          type: "integer"
           required: true
-          schema: {type: integer}
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                status: {type: string, example: "Shipped"}
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
       responses:
         200:
-          description: Order status updated
+          description: "Status updated"
 
   /orders/{order_id}/payment:
     post:
-      tags: [Orders]
-      summary: Process payment for an order
+      tags:
+        - Orders
+      summary: "Process payment for an order"
       parameters:
-        - name: order_id
-          in: path
+        - name: "order_id"
+          in: "path"
+          type: "integer"
           required: true
-          schema: {type: integer}
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                amount: {type: number}
-                payment_method: {type: string}
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            type: object
+            properties:
+              amount:
+                type: number
+              payment_method:
+                type: string
       responses:
         200:
-          description: Payment processed successfully
+          description: "Payment processed"
 
-components:
-  schemas:
-    CustomerInput:
-      type: object
-      required: [email, password]
-      properties:
-        first_name: {type: string}
-        last_name: {type: string}
-        email: {type: string}
-        password: {type: string}
-        phone: {type: string}
-        address_line1: {type: string}
-        address_line2: {type: string}
-        city: {type: string}
-        state: {type: string}
-        zip_code: {type: string}
-        country: {type: string}
+definitions:
+  CustomerRegister:
+    type: "object"
+    required:
+      - first_name
+      - last_name
+      - email
+      - password
+    properties:
+      first_name: { type: "string" }
+      last_name: { type: "string" }
+      email: { type: "string" }
+      password: { type: "string" }
+      phone: { type: "string" }
 
-    Product:
-      type: object
-      properties:
-        product_id: {type: integer}
-        name: {type: string}
-        description: {type: string}
-        amount: {type: number}
-        stock_quantity: {type: integer}
+  LoginRequest:
+    type: "object"
+    required:
+      - email
+      - password
+    properties:
+      email: { type: "string" }
+      password: { type: "string" }
+
+  CustomerUpdate:
+    type: "object"
+    properties:
+      first_name: { type: "string" }
+      last_name: { type: "string" }
+      email: { type: "string" }
+      password: { type: "string" }
+      phone: { type: "string" }
+      address_line1: { type: "string" }
+      address_line2: { type: "string" }
+      city: { type: "string" }
+      state: { type: "string" }
+      zip_code: { type: "string" }
+      country: { type: "string" }
+
+  OrderRequest:
+    type: "object"
+    required:
+      - customer_id
+      - payment_method
+      - items
+    properties:
+      customer_id: { type: "integer" }
+      payment_method: { type: "string" }
+      items:
+        type: "array"
+        items:
+          type: "object"
+          properties:
+            product_id: { type: "integer" }
+            quantity: { type: "integer" }
