@@ -1,9 +1,11 @@
 import os
 import psycopg2
+import yaml
 from flasgger import Swagger
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from psycopg2.extras import RealDictCursor
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 # CORS styling as per reference
@@ -12,9 +14,23 @@ CORS(app, support_credentials=True)
 # Initialize Swagger
 swagger = Swagger(app)
 
-# --- CONFIGURATION TOGGLE ---
-# Set this to True for the first deployment. Set to False afterwards.
+UPLOAD_FOLDER = 'static/uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['SWAGGER'] = {'title': 'Auto Spare Parts API', 'uiversion': 3}
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 INITIALIZE_DB = True
+
+# Load Swagger
+try:
+    with open("swagger.yaml", "r") as f:
+        swagger_template = yaml.safe_load(f)
+    swagger = Swagger(app, template=swagger_template)
+except FileNotFoundError:
+    swagger = Swagger(app)
+
 
 # Connect to your PostgreSQL database
 try:
@@ -62,6 +78,7 @@ try:
             description TEXT,
             amount DECIMAL(10, 2) NOT NULL,
             stock_quantity INTEGER DEFAULT 0
+            image_url VARCHAR(255) NOT NULL,
         );
 
         -- 3. Orders Table
@@ -112,6 +129,47 @@ try:
 except Exception as e:
     print(f"Error connecting to or initializing database: {e}")
 
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/products', methods=['POST'])
+def add_product():
+    # 1. Admin Validation
+    admin_id = request.form.get('admin_id')
+    cursor.execute("SELECT role FROM customers WHERE customer_id = %s", (admin_id,))
+    admin = cursor.fetchone()
+
+    if not admin or admin['role'] != 'admin':
+        return jsonify({"message": "Admin access required"}), 403
+
+    # 2. Handle File Upload
+    image_path = None
+    if 'file' in request.files:
+        file = request.files['file']
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            image_path = f"/static/uploads/{filename}"
+
+    # 3. Insert into Database
+    try:
+        insert_query = """
+                       INSERT INTO products (name, amount, description, stock_quantity, image_url)
+                       VALUES (%s, %s, %s, %s, %s) RETURNING product_id \
+                       """
+        cursor.execute(insert_query, (
+            request.form.get('name'),
+            float(request.form.get('amount', 0)),
+            request.form.get('description'),
+            int(request.form.get('stock_quantity', 0)),
+            image_path
+        ))
+        conn.commit()
+        return jsonify({'message': 'Product added successfully', 'image_url': image_path}), 201
+    except Exception as error:
+        conn.rollback()
+        return jsonify({'message': str(error)}), 500
 
 # API to authenticate user
 @app.route('/login', methods=['POST'])
