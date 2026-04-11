@@ -41,15 +41,17 @@ const MyOrders = () => {
   // Flatten all items across all orders into one table
   const rows = orders.flatMap((order) =>
     order.items.map((item, idx) => ({
-      orderId:     order.order_id,
-      status:      order.status,
-      total:       order.total_amount,
-      productId:   item.product_id,
-      qty:         item.quantity,
-      price:       item.price,
-      subtotal:    item.subtotal,
-      isFirstItem: idx === 0,
-      itemCount:   order.items.length,
+      orderId:            order.order_id,
+      status:             order.status,
+      total:              order.total_amount,
+      productId:          item.product_id,
+      productName:        item.product_name,
+      productDescription: item.description,
+      qty:                item.quantity,
+      price:              item.price,
+      subtotal:           item.subtotal,
+      isFirstItem:        idx === 0,
+      itemCount:          order.items.length,
     }))
   );
 
@@ -61,6 +63,8 @@ const MyOrders = () => {
             <th>Order ID</th>
             <th>Status</th>
             <th>Product ID</th>
+            <th>Product Name</th>
+            <th>Description</th>
             <th>Qty</th>
             <th>Price</th>
             <th>Subtotal</th>
@@ -78,6 +82,8 @@ const MyOrders = () => {
                 </>
               )}
               <td>{row.productId}</td>
+              <td>{row.productName}</td>
+              <td className="desc-cell" title={row.productDescription}>{row.productDescription}</td>
               <td>{row.qty}</td>
               <td>${row.price?.toFixed(2)}</td>
               <td>${row.subtotal?.toFixed(2)}</td>

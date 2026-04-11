@@ -15,7 +15,7 @@ const UserDashboard = () => {
   const navigate = useNavigate();
 
   // ── Auth & layout state ──────────────────────────────────────
-  const [activeModule, setActiveModule]     = useState('products');
+  const [activeModule, setActiveModule]     = useState(() => localStorage.getItem('activeModule') || 'products');
 
   // ── Products state ───────────────────────────────────────────
   const [products, setProducts]             = useState([]);
@@ -166,21 +166,21 @@ const UserDashboard = () => {
           <div className="sidebar-menu">
             <div
               className={`sidebar-item ${activeModule === 'products' ? 'active' : ''}`}
-              onClick={() => setActiveModule('products')}
+              onClick={() => { localStorage.setItem('activeModule', 'products'); setActiveModule('products'); }}
             >
               <span className="sidebar-icon"><FaBoxOpen /></span>
               <span>Products</span>
             </div>
             <div
               className={`sidebar-item ${activeModule === 'orders' ? 'active' : ''}`}
-              onClick={() => setActiveModule('orders')}
+              onClick={() => { localStorage.setItem('activeModule', 'orders'); setActiveModule('orders'); }}
             >
               <span className="sidebar-icon"><FaShoppingCart /></span>
               <span>My Orders</span>
             </div>
             <div
               className={`sidebar-item ${activeModule === 'profile' ? 'active' : ''}`}
-              onClick={() => setActiveModule('profile')}
+              onClick={() => { localStorage.setItem('activeModule', 'profile'); setActiveModule('profile'); }}
             >
               <span className="sidebar-icon"><FaUser /></span>
               <span>My Profile</span>

@@ -10,7 +10,7 @@ import './Dashboard.css';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [activeModule, setActiveModule] = useState('products');
+  const [activeModule, setActiveModule] = useState(() => localStorage.getItem('adminActiveModule') || 'products');
 
   useEffect(() => {
     const role = localStorage.getItem('userRole');
@@ -33,28 +33,28 @@ const AdminDashboard = () => {
           <div className="sidebar-menu">
             <div
               className={`sidebar-item ${activeModule === 'products' ? 'active' : ''}`}
-              onClick={() => setActiveModule('products')}
+              onClick={() => { localStorage.setItem('adminActiveModule', 'products'); setActiveModule('products'); }}
             >
               <span className="sidebar-icon"><FaBoxOpen /></span>
               <span>Manage Products</span>
             </div>
             <div
               className={`sidebar-item ${activeModule === 'orders' ? 'active' : ''}`}
-              onClick={() => setActiveModule('orders')}
+              onClick={() => { localStorage.setItem('adminActiveModule', 'orders'); setActiveModule('orders'); }}
             >
               <span className="sidebar-icon"><FaClipboardList /></span>
               <span>Manage Orders</span>
             </div>
             <div
               className={`sidebar-item ${activeModule === 'customers' ? 'active' : ''}`}
-              onClick={() => setActiveModule('customers')}
+              onClick={() => { localStorage.setItem('adminActiveModule', 'customers'); setActiveModule('customers'); }}
             >
               <span className="sidebar-icon"><FaUsers /></span>
               <span>Customers</span>
             </div>
             <div
               className={`sidebar-item ${activeModule === 'profile' ? 'active' : ''}`}
-              onClick={() => setActiveModule('profile')}
+              onClick={() => { localStorage.setItem('adminActiveModule', 'profile'); setActiveModule('profile'); }}
             >
               <span className="sidebar-icon"><FaUser /></span>
               <span>My Profile</span>
