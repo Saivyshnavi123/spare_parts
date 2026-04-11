@@ -1,6 +1,6 @@
 import os
 import yaml
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flasgger import Swagger
@@ -28,7 +28,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SWAGGER'] = {'title': 'Auto Spare Parts API', 'uiversion': 3}
 
 db = SQLAlchemy(app)
-CORS(app, resources={r"/*": {"origins": "*"}}, support_credentials=True)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Load Swagger
 try:
@@ -120,7 +120,7 @@ def register():
     if Customer.query.filter_by(email=data.get('email')).first():
         return jsonify({'message': 'Error: Customer already exists'}), 400
     new_user = Customer(first_name=data.get('first_name'), last_name=data.get('last_name'),
-                        email=data.get('email'), password=generate_password_hash(data['password'], method='pbkdf2:sha256'),
+                        email=data.get('email'), password=generate_password_hash(data['password']),
                         phone=data.get('phone'))
     db.session.add(new_user)
     db.session.commit()
@@ -210,36 +210,6 @@ def update_customer(customer_id):
     return jsonify({'message': 'Updated successfully'}), 200
 
 
-# 8.5. Get Customer Orders
-@app.route('/customers/<int:customer_id>/orders', methods=['GET'])
-def get_customer_orders(customer_id):
-    c = Customer.query.get(customer_id)
-    if not c:
-        return jsonify({'message': 'Customer not found'}), 404
-    
-    orders = Order.query.filter_by(customer_id=customer_id).all()
-    results = []
-    for order in orders:
-        order_data = {
-            "order_id": order.order_id,
-            "customer_id": order.customer_id,
-            "total_amount": order.total_amount,
-            "payment_method": order.payment_method,
-            "status": order.status,
-            "items": [
-                {
-                    "product_id": item.product_id,
-                    "quantity": item.quantity,
-                    "price": item.price,
-                    "subtotal": item.subtotal
-                } for item in order.items
-            ]
-        }
-        results.append(order_data)
-    
-    return jsonify({'customer_id': customer_id, 'orders': results}), 200
-
-
 # 9. Create Order (With Automatic Stock Management)
 @app.route('/orders', methods=['POST'])
 def create_order():
@@ -293,5 +263,10 @@ def process_payment(order_id):
 
 # ------------------- Main Entry -------------------
 if __name__ == '__main__':
+    with app.app_context():
+        if INIT_DB:
+            db.drop_all()  # Wipes existing schema to fix 'image_url' column error
+            db.create_all()
+            seed_data()
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
