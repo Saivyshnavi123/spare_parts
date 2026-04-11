@@ -313,6 +313,8 @@ def get_order_details(order_id):
         items_list.append({
             "product_id": item.product_id,
             "product_name": product.name if product else "Product no longer available",
+            "description": Product.query.get(item.product_id).description if Product.query.get(
+                item.product_id) else "Product no longer available",
             "quantity": item.quantity,
             "price": item.price,
             "subtotal": item.subtotal
