@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaBoxOpen, FaClipboardList, FaUsers, FaUser } from 'react-icons/fa';
 import Navbar from '../components/Navbar/Navbar';
 import ManageProducts from '../components/AdminModules/ManageProducts';
 import ManageOrders from '../components/AdminModules/ManageOrders';
@@ -34,28 +35,28 @@ const AdminDashboard = () => {
               className={`sidebar-item ${activeModule === 'products' ? 'active' : ''}`}
               onClick={() => setActiveModule('products')}
             >
-              <span className="sidebar-icon">📦</span>
+              <span className="sidebar-icon"><FaBoxOpen /></span>
               <span>Manage Products</span>
             </div>
             <div
               className={`sidebar-item ${activeModule === 'orders' ? 'active' : ''}`}
               onClick={() => setActiveModule('orders')}
             >
-              <span className="sidebar-icon">🛒</span>
+              <span className="sidebar-icon"><FaClipboardList /></span>
               <span>Manage Orders</span>
             </div>
             <div
               className={`sidebar-item ${activeModule === 'customers' ? 'active' : ''}`}
               onClick={() => setActiveModule('customers')}
             >
-              <span className="sidebar-icon">👥</span>
+              <span className="sidebar-icon"><FaUsers /></span>
               <span>Customers</span>
             </div>
             <div
               className={`sidebar-item ${activeModule === 'profile' ? 'active' : ''}`}
               onClick={() => setActiveModule('profile')}
             >
-              <span className="sidebar-icon">👤</span>
+              <span className="sidebar-icon"><FaUser /></span>
               <span>My Profile</span>
             </div>
           </div>

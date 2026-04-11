@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { FaBoxOpen, FaShoppingCart, FaUser } from 'react-icons/fa';
 import api, { BASE_URL } from '../api/http';
 import Navbar from '../components/Navbar/Navbar';
 import ProductDetailDrawer from '../components/rightDrawers/ProductDetailDrawer';
@@ -167,21 +168,21 @@ const UserDashboard = () => {
               className={`sidebar-item ${activeModule === 'products' ? 'active' : ''}`}
               onClick={() => setActiveModule('products')}
             >
-              <span className="sidebar-icon">📦</span>
+              <span className="sidebar-icon"><FaBoxOpen /></span>
               <span>Products</span>
             </div>
             <div
               className={`sidebar-item ${activeModule === 'orders' ? 'active' : ''}`}
               onClick={() => setActiveModule('orders')}
             >
-              <span className="sidebar-icon">🛒</span>
+              <span className="sidebar-icon"><FaShoppingCart /></span>
               <span>My Orders</span>
             </div>
             <div
               className={`sidebar-item ${activeModule === 'profile' ? 'active' : ''}`}
               onClick={() => setActiveModule('profile')}
             >
-              <span className="sidebar-icon">👤</span>
+              <span className="sidebar-icon"><FaUser /></span>
               <span>My Profile</span>
             </div>
           </div>

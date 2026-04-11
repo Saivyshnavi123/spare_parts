@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
+import { FaMoneyBillWave, FaCreditCard, FaMobileAlt } from 'react-icons/fa';
 import api from '../../api/http';
 import './PaymentDialog.css';
 
 const PAYMENT_METHODS = [
-  { label: 'Cash', icon: '💵' },
-  { label: 'Card', icon: '💳' },
-  { label: 'UPI',  icon: '📱' },
+  { label: 'Cash', icon: <FaMoneyBillWave /> },
+  { label: 'Card', icon: <FaCreditCard /> },
+  { label: 'UPI',  icon: <FaMobileAlt /> },
 ];
 
 const PaymentDrawer = ({ orderId, totalAmount, onSuccess, onClose }) => {
@@ -35,7 +36,7 @@ const PaymentDrawer = ({ orderId, totalAmount, onSuccess, onClose }) => {
 
         {/* Header */}
         <div className="dialog-header">
-          <h2>💳 Complete Payment</h2>
+          <h2>Complete Payment</h2>
           <button className="dialog-close" onClick={onClose}>✕</button>
         </div>
 

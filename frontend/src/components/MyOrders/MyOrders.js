@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { FaCreditCard } from 'react-icons/fa';
 import api from '../../api/http';
 import PaymentDrawer from '../Payment/PaymentDrawer';
 import './MyOrders.css';
@@ -90,7 +91,7 @@ const MyOrders = () => {
                       className="pay-now-btn"
                       onClick={() => setPayOrder({ orderId: row.orderId, total: row.total })}
                     >
-                      💳 Pay Now
+                      <FaCreditCard style={{ marginRight: '5px' }} /> Pay Now
                     </button>
                   ) : (
                     <span className="paid-label">—</span>
