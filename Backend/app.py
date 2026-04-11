@@ -7,12 +7,8 @@ from flasgger import Swagger
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-# ------------------- Configuration -------------------
 app = Flask(__name__)
 
-# Toggle: Set to True once to fix the 'image_url' error by resetting tables.
-# Set to False after your first successful deployment.
-INIT_DB = True
 
 UPLOAD_FOLDER = 'static/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -21,7 +17,6 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Database Connection (Render PostgreSQL)
 app.config[
     'SQLALCHEMY_DATABASE_URI'] = 'postgresql://spare_parts_vpja_user:PDbO9jg9BhA6wTJVguim0PwwSoHgl7C6@dpg-d77vcc7pm1nc73fk49ig-a.oregon-postgres.render.com/spare_parts_vpja'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -30,7 +25,6 @@ app.config['SWAGGER'] = {'title': 'Auto Spare Parts API', 'uiversion': 3}
 db = SQLAlchemy(app)
 CORS(app, resources={r"/*": {"origins": "*"}}, support_credentials=True)
 
-# Load Swagger
 try:
     with open("swagger.yaml", "r") as f:
         swagger_template = yaml.safe_load(f)
@@ -38,8 +32,6 @@ try:
 except FileNotFoundError:
     swagger = Swagger(app)
 
-
-# ------------------- Models -------------------
 
 class Customer(db.Model):
     __tablename__ = 'customers'
@@ -63,7 +55,7 @@ class Product(db.Model):
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     amount = db.Column(db.Float, nullable=False)
-    stock_quantity = db.Column(db.Integer, default=0)  # Added for stock management
+    stock_quantity = db.Column(db.Integer, default=0)
     image_url = db.Column(db.String(300))
 
 
@@ -95,7 +87,6 @@ class Payment(db.Model):
     payment_method = db.Column(db.String(50))
 
 
-# ------------------- Helpers -------------------
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -111,9 +102,7 @@ def seed_data():
         db.session.commit()
 
 
-# ------------------- API Endpoints -------------------
 
-# 1. Register
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
@@ -127,7 +116,6 @@ def register():
     return jsonify({'message': 'Customer added successfully'}), 201
 
 
-# 2. Login
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
@@ -137,7 +125,6 @@ def login():
     return jsonify({'message': 'Invalid Credentials'}), 401
 
 
-# 3. Get All Products
 @app.route('/products', methods=['GET'])
 def get_products():
     products = Product.query.all()
@@ -146,10 +133,9 @@ def get_products():
     return jsonify({'results': results})
 
 
-# 4. Add Product (Multipart for Image Upload)
 @app.route('/products', methods=['POST'])
 def add_product():
-    # Admin Validation
+
     admin_id = request.form.get('admin_id')
     admin = Customer.query.get(admin_id)
     if not admin or admin.role != 'admin':
@@ -175,7 +161,6 @@ def add_product():
     return jsonify({'message': 'Product added successfully', 'image_url': image_path}), 201
 
 
-# 5. Get Product by ID
 @app.route('/products/<int:product_id>', methods=['GET'])
 def get_product(product_id):
     p = Product.query.get(product_id)
@@ -185,20 +170,17 @@ def get_product(product_id):
     return jsonify({'message': 'Not found'}), 404
 
 
-# 6. List All Customers (Admin Only)
 @app.route('/customers', methods=['GET'])
 def get_customers():
     return jsonify({'results': [c.to_dict() for c in Customer.query.all()]})
 
 
-# 7. Get Customer by ID
 @app.route('/customers/<int:customer_id>', methods=['GET'])
 def get_customer(customer_id):
     c = Customer.query.get(customer_id)
     return jsonify(c.to_dict()) if c else (jsonify({'message': 'Not found'}), 404)
 
 
-# 8. Update Customer Profile
 @app.route('/customers/<int:customer_id>', methods=['POST'])
 def update_customer(customer_id):
     c = Customer.query.get(customer_id)
@@ -210,7 +192,6 @@ def update_customer(customer_id):
     return jsonify({'message': 'Updated successfully'}), 200
 
 
-# 8.5. Get Customer Orders
 @app.route('/customers/<int:customer_id>/orders', methods=['GET'])
 def get_customer_orders(customer_id):
     c = Customer.query.get(customer_id)
@@ -240,7 +221,6 @@ def get_customer_orders(customer_id):
     return jsonify({'customer_id': customer_id, 'orders': results}), 200
 
 
-# 9. Create Order (With Automatic Stock Management)
 @app.route('/orders', methods=['POST'])
 def create_order():
     data = request.json
@@ -256,7 +236,7 @@ def create_order():
                 db.session.rollback()
                 return jsonify({'message': f'Insufficient stock for {p.name}'}), 400
 
-            # Decrement Stock
+
             p.stock_quantity -= item['quantity']
 
             sub = p.amount * item['quantity']
@@ -269,7 +249,6 @@ def create_order():
     return jsonify({'message': 'Order created and stock updated', 'order_id': new_o.order_id}), 201
 
 
-# 10. Update Order Status
 @app.route('/orders/<int:order_id>', methods=['PUT'])
 def update_order_status(order_id):
     o = Order.query.get(order_id)
@@ -279,7 +258,6 @@ def update_order_status(order_id):
     return jsonify({'message': 'Status updated'}), 200
 
 
-# 11. Process Payment
 @app.route('/orders/<int:order_id>/payment', methods=['POST'])
 def process_payment(order_id):
     o = Order.query.get(order_id)
@@ -291,7 +269,78 @@ def process_payment(order_id):
     return jsonify({'message': 'Payment successful'}), 200
 
 
-# ------------------- Main Entry -------------------
+@app.route('/orders', methods=['GET'])
+def get_all_orders():
+
+    admin_id = request.args.get('admin_id')
+    if admin_id:
+        admin = Customer.query.get(admin_id)
+        if not admin or admin.role != 'admin':
+            return jsonify({"message": "Admin access required"}), 403
+    else:
+        return jsonify({"message": "Admin ID missing"}), 400
+
+    orders = Order.query.order_by(Order.order_id.desc()).all()
+    results = []
+
+    for order in orders:
+
+        customer = Customer.query.get(order.customer_id)
+        customer_name = f"{customer.first_name} {customer.last_name}" if customer else "Unknown Customer"
+
+        results.append({
+            "order_id": order.order_id,
+            "customer_id": order.customer_id,
+            "customer_name": customer_name.strip(),
+            "total_amount": order.total_amount,
+            "payment_method": order.payment_method,
+            "status": order.status
+        })
+
+    return jsonify({'orders': results}), 200
+
+
+@app.route('/orders/<int:order_id>', methods=['GET'])
+def get_order_details(order_id):
+    order = Order.query.get(order_id)
+    if not order:
+        return jsonify({'message': 'Order not found'}), 404
+
+
+    customer = Customer.query.get(order.customer_id)
+
+
+    items_list = []
+    for item in order.items:
+        product = Product.query.get(item.product_id)
+        items_list.append({
+            "product_id": item.product_id,
+            "product_name": product.name if product else "Product no longer available",
+            "quantity": item.quantity,
+            "price": item.price,
+            "subtotal": item.subtotal
+        })
+
+
+    order_data = {
+        "order_id": order.order_id,
+        "status": order.status,
+        "total_amount": order.total_amount,
+        "payment_method": order.payment_method,
+        "customer": {
+            "customer_id": customer.customer_id if customer else None,
+            "name": f"{customer.first_name} {customer.last_name}".strip() if customer else "Unknown",
+            "email": customer.email if customer else None,
+            "phone": customer.phone if customer else None,
+            "address": customer.address_line1 if customer else None,
+            "city": customer.city if customer else None
+        },
+        "items": items_list
+    }
+
+    return jsonify(order_data), 200
+
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
