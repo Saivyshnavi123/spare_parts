@@ -9,7 +9,6 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-
 UPLOAD_FOLDER = 'static/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -87,7 +86,6 @@ class Payment(db.Model):
     payment_method = db.Column(db.String(50))
 
 
-
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -102,14 +100,14 @@ def seed_data():
         db.session.commit()
 
 
-
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
     if Customer.query.filter_by(email=data.get('email')).first():
         return jsonify({'message': 'Error: Customer already exists'}), 400
     new_user = Customer(first_name=data.get('first_name'), last_name=data.get('last_name'),
-                        email=data.get('email'), password=generate_password_hash(data['password'], method='pbkdf2:sha256'),
+                        email=data.get('email'),
+                        password=generate_password_hash(data['password'], method='pbkdf2:sha256'),
                         phone=data.get('phone'))
     db.session.add(new_user)
     db.session.commit()
@@ -135,7 +133,6 @@ def get_products():
 
 @app.route('/products', methods=['POST'])
 def add_product():
-
     admin_id = request.form.get('admin_id')
     admin = Customer.query.get(admin_id)
     if not admin or admin.role != 'admin':
@@ -172,7 +169,7 @@ def get_product(product_id):
 
 @app.route('/customers', methods=['GET'])
 def get_customers():
-    return jsonify({'results': [c.to_dict() for c in Customer.query.all()]})
+    return jsonify({'results': [c.to_dict() for c in Customer.query.where(Customer.role == 'customer').all()]})
 
 
 @app.route('/customers/<int:customer_id>', methods=['GET'])
@@ -197,7 +194,7 @@ def get_customer_orders(customer_id):
     c = Customer.query.get(customer_id)
     if not c:
         return jsonify({'message': 'Customer not found'}), 404
-    
+
     orders = Order.query.filter_by(customer_id=customer_id).all()
     results = []
     for order in orders:
@@ -210,6 +207,9 @@ def get_customer_orders(customer_id):
             "items": [
                 {
                     "product_id": item.product_id,
+                    "description": Product.query.get(item.product_id).description if Product.query.get(
+                        item.product_id) else "Product no longer available",
+                    "product_name": Product.query.get(item.product_id).name,
                     "quantity": item.quantity,
                     "price": item.price,
                     "subtotal": item.subtotal
@@ -217,7 +217,7 @@ def get_customer_orders(customer_id):
             ]
         }
         results.append(order_data)
-    
+
     return jsonify({'customer_id': customer_id, 'orders': results}), 200
 
 
@@ -235,7 +235,6 @@ def create_order():
             if p.stock_quantity < item['quantity']:
                 db.session.rollback()
                 return jsonify({'message': f'Insufficient stock for {p.name}'}), 400
-
 
             p.stock_quantity -= item['quantity']
 
@@ -271,7 +270,6 @@ def process_payment(order_id):
 
 @app.route('/orders', methods=['GET'])
 def get_all_orders():
-
     admin_id = request.args.get('admin_id')
     if admin_id:
         admin = Customer.query.get(admin_id)
@@ -284,8 +282,9 @@ def get_all_orders():
     results = []
 
     for order in orders:
-
         customer = Customer.query.get(order.customer_id)
+        if not customer or customer.role != 'customer':
+            continue
         customer_name = f"{customer.first_name} {customer.last_name}" if customer else "Unknown Customer"
 
         results.append({
@@ -306,9 +305,7 @@ def get_order_details(order_id):
     if not order:
         return jsonify({'message': 'Order not found'}), 404
 
-
     customer = Customer.query.get(order.customer_id)
-
 
     items_list = []
     for item in order.items:
@@ -320,7 +317,6 @@ def get_order_details(order_id):
             "price": item.price,
             "subtotal": item.subtotal
         })
-
 
     order_data = {
         "order_id": order.order_id,
