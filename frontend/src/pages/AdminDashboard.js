@@ -25,7 +25,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="dashboard-container">
-      <Navbar title="Admin Dashboard" />
+      <Navbar title="Welcome!" />
 
       <div className="dashboard-layout">
         {/* Sidebar */}

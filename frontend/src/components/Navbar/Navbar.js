@@ -2,15 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Navbar.css';
 
-/**
- * Shared Navbar for both User and Admin dashboards.
- *
- * Props:
- *  - title        {string}   - heading text (e.g. "Welcome, John!")
- *  - showCart     {boolean}  - whether to show the cart icon (user only)
- *  - cartCount    {number}   - total items in cart
- *  - onCartClick  {function} - called when cart icon is clicked
- */
+
 const Navbar = ({ title, showCart = false, cartCount = 0, onCartClick }) => {
   const navigate = useNavigate();
   const [userEmail, setUserEmail]         = useState('');
