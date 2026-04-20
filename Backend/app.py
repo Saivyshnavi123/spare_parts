@@ -263,7 +263,9 @@ def process_payment(order_id):
     if not o: return jsonify({'message': 'Not found'}), 404
     db.session.add(Payment(order_id=order_id, amount=request.json['amount'],
                            payment_method=request.json['payment_method']))
-    o.status = 'Completed'
+    o.status = 'Confirmed'
+    o.payment_method = request.json['payment_method']
+    db.session.add(o)
     db.session.commit()
     return jsonify({'message': 'Payment successful'}), 200
 
