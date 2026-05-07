@@ -17,7 +17,7 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config[
-    'SQLALCHEMY_DATABASE_URI'] = 'postgresql://spare_parts_vpja_user:PDbO9jg9BhA6wTJVguim0PwwSoHgl7C6@dpg-d77vcc7pm1nc73fk49ig-a.oregon-postgres.render.com/spare_parts_vpja'
+    'SQLALCHEMY_DATABASE_URI'] = 'postgresql://spare_parts_tmk1_user:KqiicsDxSIAR8yclVpqoRM6N8SDGp47A@dpg-d7t25bsm0tmc73dn2lk0-a.oregon-postgres.render.com/spare_parts_tmk1'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SWAGGER'] = {'title': 'Auto Spare Parts API', 'uiversion': 3}
 
@@ -340,6 +340,11 @@ def get_order_details(order_id):
 
     return jsonify(order_data), 200
 
+
+# Application Context block added here
+with app.app_context():
+    db.create_all()
+    seed_data()
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
